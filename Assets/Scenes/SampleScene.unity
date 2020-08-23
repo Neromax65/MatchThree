@@ -152,7 +152,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   elementPrefab: {fileID: 5103279477272398685, guid: 000b0df502986734f81d4d1f6df7a1b9,
     type: 3}
-  grid: {fileID: 0}
+  grid: {fileID: 944534632}
 --- !u!4 &233333254
 Transform:
   m_ObjectHideFlags: 0
@@ -220,7 +220,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 6
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -298,9 +298,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fad72008be451b7408f0e5a3200d71c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rows: 5
-  columns: 7
+  rows: 6
+  columns: 6
   tilePrefab: {fileID: 612638550019085704, guid: 34c9f4e1d57ce344f83b5ffadcda67e3,
+    type: 3}
+  elementPrefab: {fileID: 5103279477272398685, guid: 000b0df502986734f81d4d1f6df7a1b9,
     type: 3}
 --- !u!1 &1740725013
 GameObject:

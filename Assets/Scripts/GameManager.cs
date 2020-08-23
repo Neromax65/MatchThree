@@ -8,7 +8,8 @@ public class GameManager : MonoBehaviour
     public static GameManager Instance { get; private set; }
     [SerializeField] private Element elementPrefab;
     [SerializeField] private Transform grid;
-    private Tile[] _tiles;
+
+    // private Tile[] _tiles;
     
     private void Awake()
     {
@@ -20,8 +21,58 @@ public class GameManager : MonoBehaviour
     public void SelectTile(Tile tile)
     {
         if (SelectedTile != null)
-            SelectedTile.Deselect();
-        SelectedTile = tile;
+        {
+            if (SelectedTile.IsValidToSwapWith(tile))
+            {
+                Grid.Instance.SwapElements(SelectedTile, tile);
+                SelectNone();
+            }
+            else if (SelectedTile == tile)
+            {
+                SelectNone();
+            }
+            else
+            {
+                SelectNone();
+                SelectedTile = tile;
+                SelectedTile.HighlightBorder(1f);
+            }
+        }
+        else
+        {
+            SelectedTile = tile;
+            SelectedTile.HighlightBorder(1f);
+        }
+        
+        
+        // if (SelectedTile != null)
+        //     SelectedTile.Deselect();
+
+        // foreach (var validSwapTile in Grid.ValidSwapTiles)
+        // {
+        //     validSwapTile.HighlightBorder(0f);
+        // }
+        // Grid.ValidSwapTiles.Clear();
+        // if (tile.Column < Grid.Tiles.GetLength(0) - 1)
+        //     Grid.ValidSwapTiles.Add(Grid.Tiles[tile.Column + 1, tile.Row]);
+        // if (tile.Column > 0)
+        //     Grid.ValidSwapTiles.Add(Grid.Tiles[tile.Column - 1, tile.Row]);
+        // if (tile.Row < Grid.Tiles.GetLength(1) - 1)
+        //     Grid.ValidSwapTiles.Add(Grid.Tiles[tile.Column, tile.Row + 1]);
+        // if (tile.Row > 0)
+        //     Grid.ValidSwapTiles.Add(Grid.Tiles[tile.Column, tile.Row - 1]);
+        // foreach (var validSwapTile in Grid.ValidSwapTiles)
+        // {
+        //     validSwapTile.HighlightBorder(0.5f);
+        // }
+        // SelectedTile = tile;
+        Debug.Log($"Selected Tile [X:{tile.Column}|Y:{tile.Row}]");
+    }
+
+    public void SelectNone()
+    {
+        SelectedTile.Deselect();
+        SelectedTile = null;
     }
 
     private void FillField()
@@ -37,7 +88,7 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        FillField();
+        // FillField();
     }
 
     // Update is called once per frame

@@ -9,7 +9,9 @@ using Random = UnityEngine.Random;
 public class Element : MonoBehaviour
 {
     [SerializeField] private Image image;
-
+    public bool IsMoving = false;
+    
+    
     private void OnValidate()
     {
         image = GetComponentInChildren<Image>();
@@ -17,18 +19,18 @@ public class Element : MonoBehaviour
 
     public enum ElementType
     {
-        Red, Green, Blue
+        Red, Green, Blue, Yellow, Cyan, Magenta
     }
 
     private void Start()
     {
-        SetRandomType();
+        // SetRandomType();
     }
 
     public ElementType Type { get; private set; } 
     
 
-    private void SetRandomType()
+    public void SetRandomType()
     {
         Type = (ElementType)Random.Range(0, Enum.GetNames(typeof(ElementType)).Length);
         switch (Type)
@@ -41,6 +43,15 @@ public class Element : MonoBehaviour
                 break;
             case ElementType.Blue:
                 image.color = Color.blue;
+                break;
+            case ElementType.Yellow:
+                image.color = Color.yellow;
+                break;
+            case ElementType.Cyan:
+                image.color = Color.cyan;
+                break;            
+            case ElementType.Magenta:
+                image.color = Color.magenta;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

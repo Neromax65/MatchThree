@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using DefaultNamespace;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -10,50 +11,53 @@ public class Tile : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, I
     public Element Element { get; private set; } = null;
     private bool _selected;
 
+    public event Action MovingAnimationEnded;
+    
+    public int Row { get;  set; }
+    public int Column { get;  set; }
 
-    private int row;
-    private int column;
+    public bool IsSwapping;
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (_selected) return;
+        if (GameManager.Instance.SelectedTile == this) return;
+        HighlightBorder(0.5f);
         
-        borders.enabled = true;
-        var color = borders.color;
-        borders.color = new Color(color.r, color.g, color.b, 0.5f);
+        // if (_selected) return;
+        //
+        // borders.enabled = true;
+        // var color = borders.color;
+        // borders.color = new Color(color.r, color.g, color.b, 0.5f);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (_selected) return;
-        
-        borders.enabled = false;
-        var color = borders.color;
-        borders.color = new Color(color.r, color.g, color.b, 1f);
+        if (GameManager.Instance.SelectedTile == this) return;
+        HighlightBorder(0f);
+        // if (_selected || Grid.ValidSwapTiles.Contains(this)) return;
+        //
+        // borders.enabled = false;
+        // var color = borders.color;
+        // borders.color = new Color(color.r, color.g, color.b, 1f);
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (_selected) return;
-        switch (eventData.button)
+        if (eventData.button != PointerEventData.InputButton.Left || Element == null) return;
+        GameManager.Instance.SelectTile(this);
+    }
+
+    public void HighlightBorder(float opacity = 1f)
+    {
+        if (opacity == 0)
         {
-            case PointerEventData.InputButton.Left:
-                borders.enabled = true;
-                GameManager.Instance.SelectTile(this);
-                _selected = true;
-                var color = borders.color;
-                borders.color = new Color(color.r, color.g, color.b, 1f);
-                break;
-            case PointerEventData.InputButton.Right:
-                if (GameManager.Instance.SelectedTile == null) return;
-                SwapElements(GameManager.Instance.SelectedTile);
-                GameManager.Instance.SelectTile(null);
-                break;
-            case PointerEventData.InputButton.Middle:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
+            borders.enabled = false;
+            return;
         }
+        // Utils.SetColorAlpha(ref borders.color, opacity);
+        borders.enabled = true;
+        var borderColor = borders.color;
+        borders.color = new Color(borderColor.r, borderColor.g, borderColor.b, opacity);
     }
 
     public void Deselect()
@@ -64,44 +68,69 @@ public class Tile : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, I
         borders.color = new Color(color.r, color.g, color.b, 1f);
     }
 
-    public void AddElement(Element element, bool force = false)
+    public void AddElement(Element element, bool animate = false)
     {
-        if (!force && Element != null)
+        // animate = false;
+        if (Element != null)
         {
             Debug.LogWarning("Trying to add element to already occupied cell. Reverting.");
             return;
         }
-
-        Element = element;
-        element.transform.position = transform.position;
-        element.transform.SetParent(transform);
-    }
-
-    public void SwapElements(Tile otherTile)
-    {
-        var tempElement = Element;
-        Element = null;
-        AddElement(otherTile.Element);
-        otherTile.AddElement(tempElement, true);
         
-        FindObjectOfType<Grid>().CheckLines();
+        if (element == null) return;
+
+        // element.transform.position = transform.position;
+        if (animate)
+        {
+            IsSwapping = true;
+            StartCoroutine(AnimateElementMove(element, element.transform.position, transform.position));
+        }
+        else
+        {
+            Element = element;
+            element.transform.SetParent(transform);
+            element.transform.position = transform.position;
+        }
     }
 
-    public void UpdatePosition(int column, int row)
+    IEnumerator AnimateElementMove(Element element, Vector2 startPosition, Vector2 targetPosition)
     {
-        this.row = column;
-        this.column = row;
+        element.IsMoving = true;
+        element.transform.SetParent(FindObjectOfType<Canvas>().transform);
+        for (float t = 0; t < 1; t += Time.deltaTime * 3)
+        {
+            element.transform.position = Vector2.Lerp(startPosition, targetPosition, t);
+            yield return null;
+        }
+
+        element.transform.SetParent(transform);
+        element.transform.position = targetPosition;
+        element.IsMoving = false;
+        Element = element;
+        IsSwapping = false;
+        MovingAnimationEnded?.Invoke();
+        MovingAnimationEnded = null;
+    }
+
+    public void UpdatePosition()
+    {
         Vector2 newPos = new Vector2();
         Vector2 worldOffset = new Vector2(GameConstants.WorldOffsetX, GameConstants.WorldOffsetY);
         Vector2 screenOffset = Camera.main.WorldToScreenPoint(worldOffset);
         
-        newPos.x = this.row * GameConstants.TileSize + screenOffset.x;
-        newPos.y = this.column * GameConstants.TileSize + screenOffset.y;
+        newPos.x = Column * GameConstants.TileSize + screenOffset.x;
+        newPos.y = Row * GameConstants.TileSize + screenOffset.y;
         transform.position = newPos;
     }
 
-    public void CheckNeighbours()
+    public bool IsValidToSwapWith(Tile tile)
     {
-        
+        return tile.Column == Column + 1 || tile.Column == Column - 1 || tile.Row == Row + 1 || tile.Row == Row - 1;
+    }
+
+    public void RemoveElement(bool destroy)
+    {
+        if (destroy) Destroy(Element.gameObject);
+        Element = null;
     }
 }
