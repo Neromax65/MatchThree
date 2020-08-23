@@ -9,6 +9,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Element elementPrefab;
     [SerializeField] private Transform grid;
 
+    public static bool GravityReversed = true;
+
     // private Tile[] _tiles;
     
     private void Awake()
@@ -66,7 +68,10 @@ public class GameManager : MonoBehaviour
         //     validSwapTile.HighlightBorder(0.5f);
         // }
         // SelectedTile = tile;
-        Debug.Log($"Selected Tile [X:{tile.Column}|Y:{tile.Row}]");
+        // Debug.Log($"Selected Tile [X:{tile.Column}|Y:{tile.Row}]");
+        // List<Tile> tempMatchedTiles = new List<Tile>();
+        // var matches = Grid.Instance.GetMatchesForTileRecursive(tile, ref tempMatchedTiles).Count;
+        // Debug.Log($"Current matches: {matches}");
     }
 
     public void SelectNone()

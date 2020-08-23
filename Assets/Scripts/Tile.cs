@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using DefaultNamespace;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -123,14 +124,22 @@ public class Tile : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, I
         transform.position = newPos;
     }
 
+    public void SetElement(Element element)
+    {
+        Element = element;
+    }
+
     public bool IsValidToSwapWith(Tile tile)
     {
-        return tile.Column == Column + 1 || tile.Column == Column - 1 || tile.Row == Row + 1 || tile.Row == Row - 1;
+        return Mathf.Abs(tile.Column - Column) + Mathf.Abs(tile.Row - Row) == 1;
+        
+        // return new Vector2(tile.Column, tile.Row) - new Vector2(Column, Row) == Vector2.one;
+        // return tile.Column == Column + 1 || tile.Column == Column - 1 || tile.Row == Row + 1 || tile.Row == Row - 1;
     }
 
     public void RemoveElement(bool destroy)
     {
-        if (destroy) Destroy(Element.gameObject);
+        if (destroy) Element.Match();
         Element = null;
     }
 }

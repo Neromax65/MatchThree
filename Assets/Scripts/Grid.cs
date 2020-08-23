@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using DefaultNamespace;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class Grid : MonoBehaviour
 {
@@ -25,7 +29,7 @@ public class Grid : MonoBehaviour
     void InitializeGrid()
     {
         Tiles = new Tile[columns, rows];
-        toTest = new Tile[columns, rows];
+        tempTiles = new Tile[columns, rows];
         for (int y = 0; y < rows; y++)
         {
             for (int x = 0; x < columns; x++)
@@ -40,6 +44,27 @@ public class Grid : MonoBehaviour
                 element.SetRandomType();
                 Tiles[x, y].AddElement(element);
             }
+        }
+
+        const int maxIterations = 4000;
+        int iteration = 0;
+        while (CountMatchedTiles(Tiles) > 0 || !CheckForPossibleMoves(Tiles))
+        {
+            if (iteration > maxIterations)
+            {
+                // Debug.LogError("Exceed maximum numbers of iterations.");
+                throw new OverflowException("Exceed maximum numbers of iterations.");
+                break;
+            }
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    Tiles[x,y].Element.SetRandomType();
+                }
+            }
+
+            iteration++;
         }
     }
     
@@ -61,6 +86,19 @@ public class Grid : MonoBehaviour
 
     public void SwapElements(Tile tile1, Tile tile2)
     {
+        List<Tile> tempMatchedTiles = new List<Tile>();
+        
+        using (new SwapTransaction(tile1, tile2))
+        {
+            int tile1Matches = GetMatchesForTileRecursive(tile1, ref tempMatchedTiles).Count;
+            tempMatchedTiles.Clear();
+            int tile2Matches = GetMatchesForTileRecursive(tile2, ref tempMatchedTiles).Count;
+            
+            if (tile1Matches < 3 && tile2Matches < 3)
+                return;
+        }
+        
+        
         var tempElement = tile1.Element;
         
         tile1.RemoveElement(false);
@@ -72,72 +110,6 @@ public class Grid : MonoBehaviour
         // tile1.MovingAnimationEnded += () => MatchAndClear(Tiles);
         tile2.MovingAnimationEnded += () => MatchAndClear(Tiles);
     }
-
-    public void CheckHorizontalLines()
-    {
-        Tile firstTile = Tiles[0, 0];
-        Tile lastTile = firstTile;
-        List<Tile> matchedTiles = new List<Tile>();
-        List<Tile> tempMatchedTiles = new List<Tile>();
-        
-        for (int row = 0; row < rows; row++)
-        {
-            // int matchedElements = 1;
-            
-            for (int column = 0; column < columns; column++)
-            {
-                var curTile = Tiles[column, row];
-                if (column > 0)
-                {
-                    if (curTile == lastTile || curTile.Element == null) continue;
-                    if (curTile.Element.Type == lastTile.Element.Type)
-                    {
-                        if (!tempMatchedTiles.Contains(lastTile))
-                            tempMatchedTiles.Add(lastTile);
-                        tempMatchedTiles.Add(curTile);
-                        Debug.Log($"tempMatchCount: {tempMatchedTiles.Count}");
-                        // matchedElements++;
-                    }
-                    else
-                    {
-                        if (tempMatchedTiles.Count >= 3)
-                        {
-                            matchedTiles.AddRange(tempMatchedTiles);
-                            Debug.Log($"Match {tempMatchedTiles.Count} of {tempMatchedTiles[0].Element.Type}!");
-                        }
-                        tempMatchedTiles.Clear();
-
-                    }
-                }
-
-                if (column == columns - 1)
-                {
-                    if (tempMatchedTiles.Count >= 3)
-                    {
-                        matchedTiles.AddRange(tempMatchedTiles);
-                        Debug.Log($"Match {tempMatchedTiles.Count} of {tempMatchedTiles[0].Element.Type}!");
-                    }
-                    tempMatchedTiles.Clear();
-                }
-
-                lastTile = curTile;
-            }
-            tempMatchedTiles.Clear();
-            lastTile = null;
-
-        }
-
-        foreach (var tile in matchedTiles)
-        {
-            if (tile.Element != null)
-                Destroy(tile.Element.gameObject);
-        }
-        if (matchedTiles.Count > 0)
-            Debug.Log($"Destroyed {matchedTiles.Count} tiles!");
-        matchedTiles.Clear();
-
-    }
-
 
     void CopyGrid(Tile[,] source, Tile[,] destination)
     {
@@ -153,14 +125,16 @@ public class Grid : MonoBehaviour
     private bool clearedTiles = false;
 
 
-    private Tile[,] toTest;
+    private Tile[,] tempTiles;
     Tile currentTile = null;
     List<Tile> matchedTiles = new List<Tile>();
     
     void MatchAndClear(Tile[,] board)
     {
+        Debug.Log("MatchAndClear");
+        
         clearedTiles = false;
-        CopyGrid(board, toTest);
+        CopyGrid(board, tempTiles);
         
         currentTile = null;
         matchedTiles.Clear();
@@ -172,10 +146,20 @@ public class Grid : MonoBehaviour
                 CheckTileRecursive(x, y);
                 if (matchedTiles.Count >= 3)
                 {
+                    var matchedType = matchedTiles.First().Element.Type;
+                    
                     foreach (var tile in matchedTiles)
                     {
                         ClearTile(tile.Column, tile.Row);
                         clearedTiles = true;
+                    }
+
+                    if (matchedTiles.Count >= 4)
+                    {
+                        var reverseGravityElement = Instantiate(elementPrefab);
+                        reverseGravityElement.SetType(matchedType);
+                        reverseGravityElement.MarkReverseGravity();
+                        matchedTiles[Random.Range(0, matchedTiles.Count)].AddElement(reverseGravityElement);
                     }
                 }
                 currentTile = null;
@@ -186,26 +170,53 @@ public class Grid : MonoBehaviour
         {
             StartCoroutine(DropTiles(board));
         }
+
+    }
+    
+    int CountMatchedTiles(Tile[,] board)
+    {
+        CopyGrid(board, tempTiles);
+        
+        currentTile = null;
+        matchedTiles.Clear();
+
+        int matches = 0;
+
+        for (int y = 0; y < rows; y++)
+        {
+            for (int x = 0; x < columns; x++)
+            {
+                CheckTileRecursive(x, y);
+                if (matchedTiles.Count >= 3)
+                {
+                    matches += matchedTiles.Count;
+                }
+                currentTile = null;
+                matchedTiles.Clear();
+            }
+        }
+
+        return matches;
     }
 
 
     void CheckTileRecursive(int x, int y)
     {
-        if (toTest[x,y] == null || toTest[x,y].Element == null) return;
+        if (tempTiles[x,y] == null || tempTiles[x,y].Element == null) return;
 
         if (currentTile == null)
         {
-            currentTile = toTest[x, y];
-            toTest[x, y] = null;
+            currentTile = tempTiles[x, y];
+            tempTiles[x, y] = null;
             matchedTiles.Add(currentTile);
-        } else if (currentTile.Element.Type != toTest[x, y].Element.Type)
+        } else if (currentTile.Element.Type != tempTiles[x, y].Element.Type)
         {
             return;
         }
         else
         {
-            matchedTiles.Add(toTest[x,y]);
-            toTest[x, y] = null;
+            matchedTiles.Add(tempTiles[x,y]);
+            tempTiles[x, y] = null;
         }
 
         if (x > 0) CheckTileRecursive(x - 1, y);
@@ -223,45 +234,234 @@ public class Grid : MonoBehaviour
     private int? firstEmpty;
     IEnumerator DropTiles(Tile[,] board)
     {
+        Debug.Log("DropTiles");
+        // TODO: Test
+        int limit = 0;
         for (int x = 0; x < columns; x++)
         {
+            // Debug.Log($"Checking X:{x}");
             firstEmpty = null;
-            for (int y = 0; y < rows; y++)
+            if (GameManager.GravityReversed)
             {
-                if (board[x, y].Element == null && !firstEmpty.HasValue)
+                for (int y = rows - 1; y > 0; y--)
                 {
-                    firstEmpty = y;
-                }
-                else if (firstEmpty.HasValue && board[x, y].Element != null)
-                {
-                    var element = board[x, y].Element;
-                    element.transform.SetParent(FindObjectOfType<Canvas>().transform);
-                    Vector2 startPosition = element.transform.position;
-                    Vector2 targetPosition = board[x, firstEmpty.Value].transform.position;
-                    // for (float t = 0; t < 1; t+= Time.deltaTime)
-                    // {
-                    float t = 0;
-                        while (Vector2.Distance(element.transform.position, targetPosition) > 0.1f)
+                    if (board[x, y].Element == null && !firstEmpty.HasValue)
+                    {
+                        firstEmpty = y;
+                    }
+                    else if (firstEmpty.HasValue && board[x, y].Element != null)
+                    {
+                        var element = board[x, y].Element;
+                        element.transform.SetParent(FindObjectOfType<Canvas>().transform);
+                        Vector2 startPosition = element.transform.position;
+                        Vector2 targetPosition = board[x, firstEmpty.Value].transform.position;
+                        for (float t = 0; t < 1; t += Time.deltaTime * 3)
                         {
-                            element.transform.position = Vector2.Lerp(element.transform.position, targetPosition, t);
-                            t += Time.deltaTime;
+                            element.transform.position = Vector2.Lerp(startPosition, targetPosition, t);
                             yield return null;
                         }
-                    // }
-                    board[x, firstEmpty.Value].AddElement(board[x,y].Element, false);
-                    board[x,y].RemoveElement(false);
-                    
-                    // board[x, firstEmpty.Value] = board[x, y];
-                    // board[x, y].Element = null;
-                    
-                    firstEmpty++;
+
+                        board[x, firstEmpty.Value].AddElement(board[x, y].Element, false);
+                        board[x, y].RemoveElement(false);
+
+                        // board[x, firstEmpty.Value] = board[x, y];
+                        // board[x, y].Element = null;
+
+                        firstEmpty--;
+                        limit++;
+                        if (limit > 100)
+                        {
+                            yield break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int y = 0; y < rows; y++)
+                {
+                    if (board[x, y].Element == null && !firstEmpty.HasValue)
+                    {
+                        firstEmpty = y;
+                    }
+                    else if (firstEmpty.HasValue && board[x, y].Element != null)
+                    {
+                        var element = board[x, y].Element;
+                        element.transform.SetParent(FindObjectOfType<Canvas>().transform);
+                        Vector2 startPosition = element.transform.position;
+                        Vector2 targetPosition = board[x, firstEmpty.Value].transform.position;
+                        for (float t = 0; t < 1; t += Time.deltaTime * 3)
+                        {
+                            element.transform.position = Vector2.Lerp(startPosition, targetPosition, t);
+                            yield return null;
+                        }
+
+                        board[x, firstEmpty.Value].AddElement(board[x, y].Element, false);
+                        board[x, y].RemoveElement(false);
+
+                        // board[x, firstEmpty.Value] = board[x, y];
+                        // board[x, y].Element = null;
+
+                        firstEmpty++;
+                        limit++;
+                        if (limit > 100)
+                        {
+                            Debug.LogError("Exceed limit.");
+                            yield break;
+                        }
+                    }
                 }
             }
 
-            // yield return null;
+            yield return null;
         }
-        MatchAndClear(board);
+
+        if (CountEmptyTiles() > 0)
+            SpawnNewTiles(board);
+        else
+            MatchAndClear(board);
+
+        yield return null;
         // UpdateIndexes(false);
+    }
+
+    // List<Tile> tempMatchedTiles = new List<Tile>();
+    public List<Tile> GetMatchesForTileRecursive(Tile tile, ref List<Tile> tempMatchedTiles)
+    {
+        Tile tileToCheck = null;
+        tempMatchedTiles.Add(tile);
+        if (tile.Column > 0)
+        {
+            tileToCheck = Tiles[tile.Column - 1, tile.Row];
+            if (tileToCheck.Element != null && tile.Element != null && tileToCheck.Element.Type == tile.Element.Type && !tempMatchedTiles.Contains(tileToCheck))
+            {
+                GetMatchesForTileRecursive(tileToCheck, ref tempMatchedTiles);
+            }
+        }
+
+        if (tile.Column < columns - 1)
+        {
+            tileToCheck = Tiles[tile.Column + 1, tile.Row];
+            if (tileToCheck.Element != null && tile.Element != null && tileToCheck.Element.Type == tile.Element.Type && !tempMatchedTiles.Contains(tileToCheck))
+            {
+                GetMatchesForTileRecursive(tileToCheck, ref tempMatchedTiles);
+            }
+        }
+        
+        if (tile.Row > 0)
+        {
+            tileToCheck = Tiles[tile.Column, tile.Row - 1];
+            if (tileToCheck.Element != null && tile.Element != null && tileToCheck.Element.Type == tile.Element.Type && !tempMatchedTiles.Contains(tileToCheck))
+            {
+                GetMatchesForTileRecursive(tileToCheck, ref tempMatchedTiles);
+            }
+        }
+        
+        if (tile.Row < rows - 1)
+        {
+            tileToCheck = Tiles[tile.Column, tile.Row + 1];
+            if (tileToCheck.Element != null && tile.Element != null && tileToCheck.Element.Type == tile.Element.Type && !tempMatchedTiles.Contains(tileToCheck))
+            {
+                GetMatchesForTileRecursive(tileToCheck, ref tempMatchedTiles);
+            }
+        }
+
+        return tempMatchedTiles;
+    }
+    
+    void SpawnNewTiles(Tile[,] board)
+    {
+        Debug.Log("SpawnNewTiles");
+        for (int x = 0; x < columns; x++)
+        {
+            if (GameManager.GravityReversed)
+            {
+                if (board[x, 0].Element == null)
+                {
+                    var element = Instantiate(elementPrefab);
+                    element.SetRandomType();
+                    board[x, 0].AddElement(element);
+                }
+            } else {
+                if (board[x, rows - 1].Element == null)
+                {
+                    var element = Instantiate(elementPrefab);
+                    element.SetRandomType();
+                    board[x, rows - 1].AddElement(element);
+                }
+            }
+        }
+
+        StartCoroutine(DropTiles(board));
+    }
+
+
+    int CountEmptyTiles()
+    {
+        List<Tile> emptyTiles = new List<Tile>();
+        for (int y = 0; y < rows; y++)
+        {
+            for (int x = 0; x < columns; x++)
+            {
+                if (Tiles[x,y].Element == null)
+                    emptyTiles.Add(Tiles[x,y]);
+            }
+        }
+
+        return emptyTiles.Count;
+    }
+
+    bool CheckForPossibleMoves(Tile[,] board)
+    {
+        for (int y = 0; y < rows; y++)
+        {
+            for (int x = 0; x < columns; x++)
+            {
+                var tile = board[x, y];
+                if (tile.Column > 0)
+                {
+                    using (new SwapTransaction(tile, board[tile.Column - 1, tile.Row]))
+                    {
+                        var tmpMatchedTiles = new List<Tile>();
+                        var matchesCount = GetMatchesForTileRecursive(tile, ref tmpMatchedTiles).Count;
+                        if (matchesCount >= 3)
+                            return true;
+                    }
+                }
+                if (tile.Column < columns - 1)
+                {
+                    using (new SwapTransaction(tile, board[tile.Column + 1, tile.Row]))
+                    {
+                        var tmpMatchedTiles = new List<Tile>();
+                        var matchesCount = GetMatchesForTileRecursive(tile, ref tmpMatchedTiles).Count;
+                        if (matchesCount >= 3)
+                            return true;
+                    }
+                }
+                if (tile.Row > 0)
+                {
+                    using (new SwapTransaction(tile, board[tile.Column, tile.Row - 1]))
+                    {
+                        var tmpMatchedTiles = new List<Tile>();
+                        var matchesCount = GetMatchesForTileRecursive(tile, ref tmpMatchedTiles).Count;
+                        if (matchesCount >= 3)
+                            return true;
+                    }
+                }
+                if (tile.Row < rows - 1)
+                {
+                    using (new SwapTransaction(tile, board[tile.Column, tile.Row + 1]))
+                    {
+                        var tmpMatchedTiles = new List<Tile>();
+                        var matchesCount = GetMatchesForTileRecursive(tile, ref tmpMatchedTiles).Count;
+                        if (matchesCount >= 3)
+                            return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
     
     void UpdateIndexes(bool updatePositions)

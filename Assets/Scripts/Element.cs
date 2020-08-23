@@ -8,13 +8,14 @@ using Random = UnityEngine.Random;
 
 public class Element : MonoBehaviour
 {
-    [SerializeField] private Image image;
+    [SerializeField] private Image hexagon;
+    [SerializeField] private Image topDown;
     public bool IsMoving = false;
     
     
     private void OnValidate()
     {
-        image = GetComponentInChildren<Image>();
+        hexagon = GetComponentInChildren<Image>();
     }
 
     public enum ElementType
@@ -22,36 +23,58 @@ public class Element : MonoBehaviour
         Red, Green, Blue, Yellow, Cyan, Magenta
     }
 
+    public void MarkReverseGravity()
+    {
+        topDown.enabled = true;
+    }
+
+    public void Match()
+    {
+        if (topDown.enabled)
+            GameManager.GravityReversed = !GameManager.GravityReversed;
+        Destroy(gameObject);
+    }
+
     private void Start()
     {
         // SetRandomType();
     }
 
-    public ElementType Type { get; private set; } 
-    
+    public ElementType Type { get; private set; }
+
+    public void SetType(ElementType type)
+    {
+        Type = type;
+        AlignColor(Type);
+    }
 
     public void SetRandomType()
     {
         Type = (ElementType)Random.Range(0, Enum.GetNames(typeof(ElementType)).Length);
-        switch (Type)
+        AlignColor(Type);
+    }
+
+    void AlignColor(ElementType type)
+    {
+        switch (type)
         {
             case ElementType.Red:
-                image.color = Color.red;
+                hexagon.color = Color.red;
                 break;
             case ElementType.Green:
-                image.color = Color.green;
+                hexagon.color = Color.green;
                 break;
             case ElementType.Blue:
-                image.color = Color.blue;
+                hexagon.color = Color.blue;
                 break;
             case ElementType.Yellow:
-                image.color = Color.yellow;
+                hexagon.color = Color.yellow;
                 break;
             case ElementType.Cyan:
-                image.color = Color.cyan;
+                hexagon.color = Color.cyan;
                 break;            
             case ElementType.Magenta:
-                image.color = Color.magenta;
+                hexagon.color = Color.magenta;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

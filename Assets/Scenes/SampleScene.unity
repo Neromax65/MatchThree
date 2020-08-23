@@ -298,8 +298,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fad72008be451b7408f0e5a3200d71c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rows: 6
-  columns: 6
+  rows: 7
+  columns: 7
   tilePrefab: {fileID: 612638550019085704, guid: 34c9f4e1d57ce344f83b5ffadcda67e3,
     type: 3}
   elementPrefab: {fileID: 5103279477272398685, guid: 000b0df502986734f81d4d1f6df7a1b9,
