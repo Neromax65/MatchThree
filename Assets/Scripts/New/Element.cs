@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using DefaultNamespace;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
@@ -12,10 +13,10 @@ namespace New
     /// <summary>
     /// Цветной элемент, располагаемый на игровом поле
     /// </summary>
-    public class Element : MonoBehaviour, IPointerClickHandler
+    public class Element : MonoBehaviour
     {
         [SerializeField] private Image icon;
-        [SerializeField] private Image reverseGravityIcon;
+        [SerializeField] private Image invertGravityIcon;
         
         /// <summary>
         /// Индекс колонки элемента, его координата X в рамках игрового поля
@@ -33,13 +34,24 @@ namespace New
             Red, Green, Blue, Yellow, Cyan, Magenta
         }
 
-        public bool IsFalling = false;
+        // public bool IsFalling = false;
 
         /// <summary>
         /// Тип/цвет элемента
         /// </summary>
         public ElementType Type { get; private set; }
 
+        public void EnableGravityInverting()
+        {
+            invertGravityIcon.enabled = true;
+        }
+
+        public void SetType(ElementType type)
+        {
+            Type = type;
+            ApplyColor(Type);
+        }
+        
         public void SetRandomType()
         {
             Type = (ElementType)Random.Range(0, Enum.GetNames(typeof(ElementType)).Length);
@@ -79,13 +91,15 @@ namespace New
         /// </summary>
         public void Match()
         {
+            if (invertGravityIcon.enabled)
+                GameManager.GravityInverted = !GameManager.GravityInverted;
             Destroy(gameObject);
         }
 
         private void Update()
         {
             // TODO: Test
-            GetComponentInChildren<Text>().text = $"[{Column},{Row}]";
+            // GetComponentInChildren<Text>().text = $"[{Column},{Row}]";
             gameObject.name = $"Element [{Column},{Row}][{Type}]";
         }
 
@@ -158,24 +172,10 @@ namespace New
         //         yield return null;
         //     }
         // }
-        public void OnPointerClick(PointerEventData eventData)
+
+        public bool IsAdjacentTo(Element otherElement)
         {
-            if (SelectionManager.SelectedElement == this)
-            {
-                Debug.Log($"Element deselected");
-                SelectionManager.SelectElement(null);
-            } 
-            else if (SelectionManager.SelectedElement == null)
-            {
-                Debug.Log($"Selected element [X:{Column}, Y:{Row}]. Current matches: {Grid.Instance.CheckMatches(Grid.Instance.Elements, this).Count}");
-                SelectionManager.SelectElement(this);
-            }
-            else
-            {
-                Debug.Log($"Swapping element [X:{SelectionManager.SelectedElement.Column}, Y:{SelectionManager.SelectedElement.Row}] with element [X:{Column}, Y:{Row}]");
-                SelectionManager.SelectedElement.Swap(this);
-                SelectionManager.SelectElement(null);
-            }
+            return Mathf.Abs(otherElement.Column - Column) + Mathf.Abs(otherElement.Row - Row) == 1;
         }
     }
 }

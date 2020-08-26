@@ -94,7 +94,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1092176308341727481
 RectTransform:
   m_ObjectHideFlags: 0
@@ -182,7 +182,7 @@ GameObject:
   - component: {fileID: 1163731088231556412}
   - component: {fileID: 3086381354169807277}
   m_Layer: 0
-  m_Name: TopDown
+  m_Name: InverseIcon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -254,6 +254,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2920883313169650095}
   - component: {fileID: 3739257845245242073}
+  - component: {fileID: 9191106350371163502}
   m_Layer: 5
   m_Name: Element
   m_TagString: Untagged
@@ -294,7 +295,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   icon: {fileID: 8148259835486342820}
-  reverseGravityIcon: {fileID: 3086381354169807277}
+  invertGravityIcon: {fileID: 3086381354169807277}
   Column: 0
   Row: 0
-  IsFalling: 0
+--- !u!114 &9191106350371163502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6691565138271702227}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62ab5f9b667c403ab14dafaeabeb91a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

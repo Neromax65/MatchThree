@@ -45,7 +45,7 @@ public class Tile : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, I
     public void OnPointerClick(PointerEventData eventData)
     {
         if (eventData.button != PointerEventData.InputButton.Left || Element == null) return;
-        GameManager.Instance.SelectTile(this);
+        // GameManager.Instance.SelectTile(this);
     }
 
     public void HighlightBorder(float opacity = 1f)

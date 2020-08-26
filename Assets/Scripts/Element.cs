@@ -31,7 +31,7 @@ public class Element : MonoBehaviour
     public void Match()
     {
         if (topDown.enabled)
-            GameManager.GravityReversed = !GameManager.GravityReversed;
+            GameManager.GravityInverted = !GameManager.GravityInverted;
         Destroy(gameObject);
     }
 

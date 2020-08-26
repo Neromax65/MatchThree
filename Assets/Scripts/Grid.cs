@@ -242,7 +242,7 @@ public class Grid : MonoBehaviour
         Coroutine coroutine = null;
         for (int x = 0; x < columns; x++)
         {
-            coroutine = StartCoroutine(DropTilesY(board, x, GameManager.GravityReversed));
+            coroutine = StartCoroutine(DropTilesY(board, x, GameManager.GravityInverted));
 
             // yield return null;
         }
@@ -381,7 +381,7 @@ public class Grid : MonoBehaviour
         Debug.Log("SpawnNewTiles");
         for (int x = 0; x < columns; x++)
         {
-            if (GameManager.GravityReversed)
+            if (GameManager.GravityInverted)
             {
                 if (board[x, 0].Element == null)
                 {
