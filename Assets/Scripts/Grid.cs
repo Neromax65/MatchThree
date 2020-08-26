@@ -166,10 +166,13 @@ public class Grid : MonoBehaviour
                 matchedTiles.Clear();
             }
         }
+
         if (clearedTiles)
         {
-            StartCoroutine(DropTiles(board));
+            DropTiles(board);
         }
+        //     StartCoroutine(DropTiles(board));
+        // }
 
     }
     
@@ -232,97 +235,101 @@ public class Grid : MonoBehaviour
     }
 
     private int? firstEmpty;
-    IEnumerator DropTiles(Tile[,] board)
+    void DropTiles(Tile[,] board)
     {
+        coroutineEnded = false;
         Debug.Log("DropTiles");
-        // TODO: Test
-        int limit = 0;
+        Coroutine coroutine = null;
         for (int x = 0; x < columns; x++)
         {
-            // Debug.Log($"Checking X:{x}");
-            firstEmpty = null;
-            if (GameManager.GravityReversed)
-            {
-                for (int y = rows - 1; y > 0; y--)
-                {
-                    if (board[x, y].Element == null && !firstEmpty.HasValue)
-                    {
-                        firstEmpty = y;
-                    }
-                    else if (firstEmpty.HasValue && board[x, y].Element != null)
-                    {
-                        var element = board[x, y].Element;
-                        element.transform.SetParent(FindObjectOfType<Canvas>().transform);
-                        Vector2 startPosition = element.transform.position;
-                        Vector2 targetPosition = board[x, firstEmpty.Value].transform.position;
-                        for (float t = 0; t < 1; t += Time.deltaTime * 3)
-                        {
-                            element.transform.position = Vector2.Lerp(startPosition, targetPosition, t);
-                            yield return null;
-                        }
+            coroutine = StartCoroutine(DropTilesY(board, x, GameManager.GravityReversed));
 
-                        board[x, firstEmpty.Value].AddElement(board[x, y].Element, false);
-                        board[x, y].RemoveElement(false);
-
-                        // board[x, firstEmpty.Value] = board[x, y];
-                        // board[x, y].Element = null;
-
-                        firstEmpty--;
-                        limit++;
-                        if (limit > 100)
-                        {
-                            yield break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int y = 0; y < rows; y++)
-                {
-                    if (board[x, y].Element == null && !firstEmpty.HasValue)
-                    {
-                        firstEmpty = y;
-                    }
-                    else if (firstEmpty.HasValue && board[x, y].Element != null)
-                    {
-                        var element = board[x, y].Element;
-                        element.transform.SetParent(FindObjectOfType<Canvas>().transform);
-                        Vector2 startPosition = element.transform.position;
-                        Vector2 targetPosition = board[x, firstEmpty.Value].transform.position;
-                        for (float t = 0; t < 1; t += Time.deltaTime * 3)
-                        {
-                            element.transform.position = Vector2.Lerp(startPosition, targetPosition, t);
-                            yield return null;
-                        }
-
-                        board[x, firstEmpty.Value].AddElement(board[x, y].Element, false);
-                        board[x, y].RemoveElement(false);
-
-                        // board[x, firstEmpty.Value] = board[x, y];
-                        // board[x, y].Element = null;
-
-                        firstEmpty++;
-                        limit++;
-                        if (limit > 100)
-                        {
-                            Debug.LogError("Exceed limit.");
-                            yield break;
-                        }
-                    }
-                }
-            }
-
-            yield return null;
+            // yield return null;
         }
 
-        if (CountEmptyTiles() > 0)
-            SpawnNewTiles(board);
-        else
-            MatchAndClear(board);
+        // yield return new WaitUntil(() => coroutineEnded);
+        
+        // if (CountEmptyTiles(board) > 0)
+        //     SpawnNewTiles(board);
+        // else
+        //     MatchAndClear(board);
 
-        yield return null;
+        // yield return null;
         // UpdateIndexes(false);
+        // yield break;
+    }
+
+    private bool coroutineEnded;
+
+    private IEnumerator DropTilesY(Tile[,] board, int x, bool inverted)
+    {
+        Debug.Log("DropTilesY");
+        firstEmpty = null;
+        if (inverted)
+        {
+            for (int y = rows - 1; y >= 0; y--)
+            {
+                if (board[x, y].Element == null && !firstEmpty.HasValue)
+                {
+                    firstEmpty = y;
+                }
+                else if (firstEmpty.HasValue && board[x, y].Element != null)
+                {
+                    var element = board[x, y].Element;
+                    element.transform.SetParent(FindObjectOfType<Canvas>().transform);
+                    Vector2 startPosition = element.transform.position;
+                    Vector2 targetPosition = board[x, firstEmpty.Value].transform.position;
+                    for (float t = 0; t < 1; t += Time.deltaTime * 3)
+                    {
+                        element.transform.position = Vector2.Lerp(startPosition, targetPosition, t);
+                        yield return null;
+                    }
+
+                    board[x, firstEmpty.Value].AddElement(board[x, y].Element, false);
+                    board[x, y].RemoveElement(false);
+
+                    firstEmpty--;
+                }
+
+                yield return null;
+            }
+        }
+        else
+        {
+            for (int y = 0; y < rows; y++)
+            {
+                var element = board[x, y].Element;
+                if (element == null && !firstEmpty.HasValue)
+                {
+                    firstEmpty = y;
+                }
+                else if (element != null && firstEmpty.HasValue)
+                {
+                    element.transform.SetParent(FindObjectOfType<Canvas>().transform);
+                    Vector2 startPosition = element.transform.position;
+                    Vector2 targetPosition = board[x, firstEmpty.Value].transform.position;
+                    for (float t = 0; t < 1; t += Time.deltaTime * 3)
+                    {
+                        element.transform.position = Vector2.Lerp(startPosition, targetPosition, t);
+                        yield return null;
+                    }
+
+                    board[x, firstEmpty.Value].AddElement(board[x, y].Element, false);
+                    board[x, y].RemoveElement(false);
+
+                    firstEmpty++;
+                } 
+                yield return null;
+            }
+        }
+
+        if (x == columns - 1)
+        {
+            if (CountEmptyTiles(board) > 0)
+                SpawnNewTiles(board);
+            else
+                MatchAndClear(board);
+        }
     }
 
     // List<Tile> tempMatchedTiles = new List<Tile>();
@@ -392,22 +399,24 @@ public class Grid : MonoBehaviour
             }
         }
 
-        StartCoroutine(DropTiles(board));
+        DropTiles(board);
+        // StartCoroutine(DropTiles(board));
     }
 
 
-    int CountEmptyTiles()
+    int CountEmptyTiles(Tile[,] board)
     {
         List<Tile> emptyTiles = new List<Tile>();
         for (int y = 0; y < rows; y++)
         {
             for (int x = 0; x < columns; x++)
             {
-                if (Tiles[x,y].Element == null)
-                    emptyTiles.Add(Tiles[x,y]);
+                if (board[x,y].Element == null)
+                    emptyTiles.Add(board[x,y]);
             }
         }
 
+        Debug.Log($"CountEmptyTiles: {emptyTiles.Count}");
         return emptyTiles.Count;
     }
 
@@ -462,22 +471,5 @@ public class Grid : MonoBehaviour
         }
 
         return false;
-    }
-    
-    void UpdateIndexes(bool updatePositions)
-    {
-        for (int y = 0; y < rows; y++)
-        {
-            for (int x = 0; x < columns; x++)
-            {
-                if (Tiles[x,y] != null)
-                {
-                    Tiles[x, y].Row = y;
-                    Tiles[x, y].Column = x;
-                    if (updatePositions)
-                        Tiles[x, y].UpdatePosition();
-                }
-            }
-        }
     }
 }

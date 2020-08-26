@@ -9,7 +9,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Element elementPrefab;
     [SerializeField] private Transform grid;
 
-    public static bool GravityReversed = true;
+    public static bool GravityReversed;
 
     // private Tile[] _tiles;
     
