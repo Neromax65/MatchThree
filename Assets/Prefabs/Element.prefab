@@ -255,6 +255,7 @@ GameObject:
   - component: {fileID: 2920883313169650095}
   - component: {fileID: 3739257845245242073}
   - component: {fileID: 9191106350371163502}
+  - component: {fileID: 8400893945697983281}
   m_Layer: 5
   m_Name: Element
   m_TagString: Untagged
@@ -294,8 +295,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17f8e7dbcf834505b390c01e1795099e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  icon: {fileID: 8148259835486342820}
+  mainIcon: {fileID: 8148259835486342820}
   invertGravityIcon: {fileID: 3086381354169807277}
+  animator: {fileID: 8400893945697983281}
   Column: 0
   Row: 0
 --- !u!114 &9191106350371163502
@@ -310,3 +312,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62ab5f9b667c403ab14dafaeabeb91a7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!95 &8400893945697983281
+Animator:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6691565138271702227}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 9dd7d8b438d00c64c80ef639bedcbfac, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorControllerStateOnDisable: 0
