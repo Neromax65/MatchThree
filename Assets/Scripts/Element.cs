@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections;
-using System.Runtime.CompilerServices;
+using Enums;
 using Helpers;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
@@ -13,21 +11,39 @@ using Random = UnityEngine.Random;
 /// </summary>
 public class Element : MonoBehaviour
 {
-    [SerializeField] private Image mainIcon;
-    [SerializeField] private Image invertGravityIcon;
-    // [SerializeField] private Animator animator;
+    /// <summary>
+    /// Ссылка на основной спрайт элемента
+    /// </summary>
+    [SerializeField] private Image mainImage;
+    
+    /// <summary>
+    /// Ссылка на спрайт иконки смены гравитации
+    /// </summary>
+    [SerializeField] private Image invertGravityImage;
+    
+    /// <summary>
+    /// Ссылка на спрайт иконки смены гравитации
+    /// </summary>
+    [SerializeField] private Image selectionBorderImage;
+    
+    /// <summary>
+    /// Ссылка на компонент аниматор
+    /// </summary>
+    [SerializeField] private Animator animator;
         
     /// <summary>
     /// Индекс колонки элемента, его координата X в рамках игрового поля
     /// </summary>
-    public int Column;
+    [HideInInspector]
+    public int column;
         
     /// <summary>
     /// Индекс ряда элемента, его координата Y в рамках игрового поля
     /// </summary>
-    public int Row;
+    [HideInInspector]
+    public int row;
 
-    private static readonly int Match1 = Animator.StringToHash("Match");
+    // private static readonly int Match1 = Animator.StringToHash("Match");
 
     // Перечисление возможных цветов/типов элементов
     public enum ElementType
@@ -40,151 +56,146 @@ public class Element : MonoBehaviour
     /// </summary>
     public ElementType Type { get; private set; }
 
-    public void EnableGravityInverting()
-    {
-        invertGravityIcon.enabled = true;
-    }
-
+    /// <summary>
+    /// Установить конкретный тип элемента
+    /// </summary>
+    /// <param name="type">Тип элемента</param>
     public void SetType(ElementType type)
     {
         Type = type;
         UpdateColor();
     }
-        
+    
+    /// <summary>
+    /// Получить случайный тип элемента из всех возможных
+    /// </summary>
+    /// <returns>Случайный тип элемента</returns>
     public static ElementType GetRandomType()
     {
         return (ElementType)Random.Range(0, Enum.GetNames(typeof(ElementType)).Length);
     }
 
-
-    public static Element SpawnRandom(int column, int row)
+    /// <summary>
+    /// Создание цветного элемента
+    /// </summary>
+    /// <param name="column">Колонка</param>
+    /// <param name="row">Ряд</param>
+    /// <param name="type">Тип элемента</param>
+    /// <param name="inverseGravity">Меняет ли гравитацию</param>
+    /// <returns></returns>
+    public static Element Create(int column, int row, ElementType type, bool inverseGravity)
     {
-        Vector2 spawnPosition = Grid.GetWorldCoords(column, row);
-        var element = Instantiate(Grid.Instance.elementPrefab, spawnPosition, Quaternion.identity, Grid.Instance.transform);
-        element.Column = column;
-        element.Row = row;
+        Vector2 spawnPosition = GetWorldCoords(column, row);
+        var element = Instantiate(GameManager.Instance.elementPrefab, spawnPosition, Quaternion.identity, Grid.Instance.transform);
+        element.column = column;
+        element.row = row;
         element.gameObject.name = $"Element [{column},{row}][{element.Type}]";
-        
-        element.SetType((ElementType)Random.Range(0, Enum.GetNames(typeof(ElementType)).Length));
-            
-        return element;
-    }
-        
-    public static Element SpawnInverseGravity(int column, int row, ElementType type)
-    {
-        Vector2 spawnPosition = Grid.GetWorldCoords(column, row);
-        var element = Instantiate(Grid.Instance.elementPrefab, spawnPosition, Quaternion.identity, Grid.Instance.transform);
-        element.Column = column;
-        element.Row = row;
-        element.gameObject.name = $"Element [{column},{row}][{element.Type}]";
-        
         element.SetType(type);
-        element.EnableGravityInverting();
-            
+        element.invertGravityImage.enabled = inverseGravity;
+
         return element;
     }
 
+    /// <summary>
+    /// Обновление цвета элемента в соответствии с типом
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Выкинет при несуществующем типе элемента</exception>
     void UpdateColor()
     {
         switch (Type)
         {
             case ElementType.Red:
-                mainIcon.color = Color.red;
+                mainImage.color = Color.red;
                 break;
             case ElementType.Green:
-                mainIcon.color = Color.green;
+                mainImage.color = Color.green;
                 break;
             case ElementType.Blue:
-                mainIcon.color = Color.blue;
+                mainImage.color = Color.blue;
                 break;
             case ElementType.Yellow:
-                mainIcon.color = Color.yellow;
+                mainImage.color = Color.yellow;
                 break;
             case ElementType.Cyan:
-                mainIcon.color = Color.cyan;
+                mainImage.color = Color.cyan;
                 break;            
             case ElementType.Magenta:
-                mainIcon.color = Color.magenta;
+                mainImage.color = Color.magenta;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
     }
-        
-        
+    
     /// <summary>
     /// Засчитывание элемента как совпавшего и удаление его из игры
     /// </summary>
     public void Match()
     {
-        mainIcon.raycastTarget = false;
-        invertGravityIcon.raycastTarget = false;
-        
-        // var animator = GetComponent<Animator>();
-        // animator.SetTrigger(Match1);
-        //
-        // // yield return new WaitWhile(animator.GetCurrentAnimatorStateInfo(0).);
-        //
-        //
-        // yield return new WaitForSeconds(0.1f);
-        //
-        // // while (animator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1)
-        // // {
-        // //     yield return null;
-        // // }
-        // //
-        
-        if (invertGravityIcon.enabled)
+        mainImage.raycastTarget = false;
+        invertGravityImage.raycastTarget = false;
+        column = -1;
+        row = -1;
+
+        if (invertGravityImage.enabled)
             GameManager.GravityInverted = !GameManager.GravityInverted;
-        Destroy(gameObject);
-        // yield break;
+        
+        animator.SetTrigger("Match");
+        
+        Destroy(gameObject, 0.11f);
     }
 
-    private void Update()
-    {
-        // TODO: Test
-        // GetComponentInChildren<Text>().text = $"[{Column},{Row}]";
-        gameObject.name = $"Element [{Column},{Row}][{Type}]";
-    }
-
-    public IEnumerator SettleWorldPosition()
+    /// <summary>
+    /// Обновление положения элемента в мировых координатах в соответствии с координатами на сетке
+    /// </summary>
+    /// <returns></returns>
+    public IEnumerator UpdateWorldPosition(float time = 0.35f)
     {
         Vector2 startPosition = transform.position;
-        Vector2 targetPosition = Grid.GetWorldCoords(Column, Row);
-        for (float t = 0; t < 1; t += Time.deltaTime * 2)
-        {
-            transform.position = Vector2.Lerp(startPosition, targetPosition, t);
-            yield return null;
+        Vector2 targetPosition = GetWorldCoords(column, row);
+        
+        if (time > 0) {
+            for (float t = 0; t < 1; t += Time.deltaTime * 1/time)
+            {
+                transform.position = Vector2.Lerp(startPosition, targetPosition, t);
+                yield return null;
+            }
         }
 
+        gameObject.name = $"Element [{column},{row}][{Type}]";
         transform.position = targetPosition;
     }
 
+    /// <summary>
+    /// Поменяться местами с другим элементом. Вызывается самим игроком. Если после смены мест совпадений не нашлось,
+    /// то элементы перемещаются обратно.
+    /// </summary>
+    /// <param name="otherElement"></param>
+    /// <returns></returns>
     public IEnumerator Swap(Element otherElement)
     {
         GameManager.GameStatus = GameStatus.PlayingAnimation;
-
+        Debug.Log("Swap");
         using (var transaction = new SwapTransaction(this, otherElement))
         {
-            Coroutine swap1 = StartCoroutine(SettleWorldPosition());
-            Coroutine swap2 = StartCoroutine(otherElement.SettleWorldPosition());
+            Coroutine swap1 = StartCoroutine(UpdateWorldPosition());
+            Coroutine swap2 = StartCoroutine(otherElement.UpdateWorldPosition());
 
             yield return swap1;
             yield return swap2;
 
-            int matches = Grid.Instance.CalculateMatches(false);
+            // int matches = Grid.Instance.CalculateMatches(false);
+            var matches = Grid.Instance.CalculateMatches(false);
             if (matches > 0)
             {
-                // Grid.Instance.UpdateElementIndices(this);
-                // Grid.Instance.UpdateElementIndices(otherElement);
-                Grid.Instance.CalculateMatches(true);
                 transaction.Commit();
+                Grid.Instance.CalculateMatches(true);
                 yield break;
             }
         }
         
-        Coroutine returnSwap1 = StartCoroutine(SettleWorldPosition());
-        Coroutine returnSwap2 = StartCoroutine(otherElement.SettleWorldPosition());
+        Coroutine returnSwap1 = StartCoroutine(UpdateWorldPosition());
+        Coroutine returnSwap2 = StartCoroutine(otherElement.UpdateWorldPosition());
 
         yield return returnSwap1;
         yield return returnSwap2;
@@ -192,8 +203,43 @@ public class Element : MonoBehaviour
         GameManager.GameStatus = GameStatus.WaitingForInput;
     }
 
+    /// <summary>
+    /// Является ли элемент смежным (не считая диагонали) по отношению к другому элементу
+    /// </summary>
+    /// <param name="otherElement">Другой элемент</param>
+    /// <returns>True - элемент смежный, False - элемент не смежный</returns>
     public bool IsAdjacentTo(Element otherElement)
     {
-        return Mathf.Abs(otherElement.Column - Column) + Mathf.Abs(otherElement.Row - Row) == 1;
+        return Mathf.Abs(otherElement.column - column) + Mathf.Abs(otherElement.row - row) == 1;
+    }
+    
+    /// <summary>
+    /// Преобразование координат сетки в мировые координаты с учетом смещения
+    /// </summary>
+    /// <param name="column">Колонка</param>
+    /// <param name="row">Ряд</param>
+    /// <returns>Вектор в координатах мира</returns>
+    private static Vector2 GetWorldCoords(int column, int row)
+    {
+        return new Vector2(column * GameManager.CellSize.x + GameManager.Offset.x, row * GameManager.CellSize.x + GameManager.Offset.y);
+    }
+
+    /// <summary>
+    /// Переключить отлов лучей
+    /// </summary>
+    /// <param name="flag">True - вкл, False - выкл</param>
+    public void ToggleRaycasts(bool flag)
+    {
+        mainImage.raycastTarget = flag;
+        invertGravityImage.raycastTarget = flag;
+    }
+
+    /// <summary>
+    /// Переключить видимость рамки выбора
+    /// </summary>
+    /// <param name="flag">True - вкл, False - выкл</param>
+    public void ToggleSelectionBorder(bool flag)
+    {
+        selectionBorderImage.enabled = flag;
     }
 }

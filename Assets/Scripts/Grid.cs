@@ -1,31 +1,46 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Enums;
 using Helpers;
 using UnityEngine;
-using Debug = System.Diagnostics.Debug;
 using Random = UnityEngine.Random;
 
+/// <summary>
+/// Игровая сетка. Класс отвечает за положение элементов на поле, просчитывание совпадений, проверки на возможные ходы.
+/// </summary>
 public class Grid : MonoBehaviour
 {
-    private const int CellSize = 80;
-    private const int MinElementsToMatch = 3;
-    private const int MatchesToSpawnInverseElement = 4;
+    /// <summary>
+    /// Максимальное количество итераций для цикла, подбирающего играбельное поле.
+    /// </summary>
     private const int OverflowLimit = 4000;
-    
+
+    /// <summary>
+    /// Реализация синглтона
+    /// </summary>
     public static Grid Instance;
-    public Element elementPrefab;
-    public int columns;
-    public int rows;
-    
+
+    /// <summary>
+    /// Двумерный массив, хранящий в себе все элементы, ключами являются X (Column) и Y (Row) координаты соответственно
+    /// </summary>
     private Element[,] _elements;
+
+    /// <summary>
+    /// Кеширование колонок
+    /// </summary>
+    private int _columns;
     
-    private static Vector2 _offset;
+    /// <summary>
+    /// Кеширование рядов
+    /// </summary>
+    private int _rows;
 
     private void Awake()
     {
         Instance = this;
-        _offset = Camera.main.WorldToScreenPoint(-new Vector2(columns/2, rows/2));
+        _rows = GameManager.Instance.rows;
+        _columns = GameManager.Instance.columns;
     }
 
     private void Start()
@@ -33,14 +48,19 @@ public class Grid : MonoBehaviour
         InitializeGrid();
     }
 
+    /// <summary>
+    /// Инициализация игровой сетки. Отвечает за генерацию играбельного поля.
+    /// </summary>
+    /// <exception cref="StackOverflowException">Может выбросить, если было указано слишком большая ширина/высота
+    /// сетки при малом количестве возможных элементов </exception>
     private void InitializeGrid()
     {
-        _elements = new Element[columns,rows];
-        for (int y = 0; y < rows; y++)
+        _elements = new Element[_columns, _rows];
+        for (int y = 0; y < _rows; y++)
         {
-            for (int x = 0; x < columns; x++)
+            for (int x = 0; x < _columns; x++)
             {
-                _elements[x, y] = Element.SpawnRandom(x, y);
+                _elements[x, y] = Element.Create(x, y, Element.GetRandomType(), false);
             }
         }
 
@@ -49,12 +69,12 @@ public class Grid : MonoBehaviour
         {
             if (counter >= OverflowLimit)
                 throw new StackOverflowException();
-            
-            for (int y = 0; y < rows; y++)
+
+            for (int y = 0; y < _rows; y++)
             {
-                for (int x = 0; x < columns; x++)
+                for (int x = 0; x < _columns; x++)
                 {
-                    _elements[x,y].SetType(Element.GetRandomType());
+                    _elements[x, y].SetType(Element.GetRandomType());
                 }
             }
 
@@ -63,12 +83,18 @@ public class Grid : MonoBehaviour
 
         GameManager.GameStatus = GameStatus.WaitingForInput;
     }
-    
+
+
+    /// <summary>
+    /// Проверка возможности хода
+    /// </summary>
+    /// <returns>True - есть возможные ходы, False - нет возможных ходов</returns>
     public bool IsMoveAvailable()
     {
-        for (int y = 0; y < rows; y++)
+        Debug.Log("IsMoveAvailable");
+        for (int y = 0; y < _rows; y++)
         {
-            for (int x = 0; x < columns; x++)
+            for (int x = 0; x < _columns; x++)
             {
                 var element = _elements[x, y];
                 if (element == null) continue;
@@ -80,49 +106,54 @@ public class Grid : MonoBehaviour
                     using (new SwapTransaction(element, adjacentElement))
                     {
                         var matchesCount = GetMatchesForElement(element).Count;
-                        if (matchesCount >= MinElementsToMatch) return true;
-                    } 
+                        if (matchesCount >= GameManager.Instance.minElementsToMatch) return true;
+                    }
                 }
             }
         }
+
         return false;
     }
 
 
+    /// <summary>
+    /// Просчитыване совпадений по всем элементам
+    /// </summary>
+    /// <param name="clearMatched">Нужно ли очищать поле от совпавших элементов</param>
+    /// <returns>Количество совпавших элементов</returns>
     public int CalculateMatches(bool clearMatched)
     {
         int totalMatches = 0;
-        // List<Coroutine> matchRoutines = new List<Coroutine>();
-        for (int y = 0; y < rows; y++)
+        for (int y = 0; y < _rows; y++)
         {
-            for (int x = 0; x < columns; x++)
+            for (int x = 0; x < _columns; x++)
             {
-                if (_elements[x,y] == null) continue;
+                if (_elements[x, y] == null) continue;
 
-                List<Element> matches = GetMatchesForElement(_elements[x, y]);
-                if (matches.Count >= MinElementsToMatch)
+                List<Element> currentMatchedElements = GetMatchesForElement(_elements[x, y]);
+                if (currentMatchedElements.Count >= GameManager.Instance.minElementsToMatch)
                 {
-                    totalMatches += matches.Count;
-                        
+                    totalMatches += currentMatchedElements.Count;
+
                     if (clearMatched)
                     {
-                        Element.ElementType matchedType = matches[0].Type;
-                        int randomMatchedIndex = Random.Range(0, matches.Count);
-                        int randomMatchedCol = matches[randomMatchedIndex].Column;
-                        int randomMatchedRow = matches[randomMatchedIndex].Row;
-                            
-                        foreach (var element in matches)
+                        Element.ElementType matchedType = currentMatchedElements[0].Type;
+                        int randomMatchedIndex = Random.Range(0, currentMatchedElements.Count);
+                        int randomMatchedCol = currentMatchedElements[randomMatchedIndex].column;
+                        int randomMatchedRow = currentMatchedElements[randomMatchedIndex].row;
+
+                        foreach (var element in currentMatchedElements)
                         {
-                            _elements[element.Column, element.Row].Match();
-                            // matchRoutines.Add(StartCoroutine(_elements[element.Column, element.Row].Match()));
-                            _elements[element.Column, element.Row] = null;
+                            _elements[element.column, element.row] = null;
+                            element.Match();
                         }
-                        if (matches.Count >= MatchesToSpawnInverseElement)
+
+                        if (currentMatchedElements.Count >= GameManager.Instance.matchesToSpawnInverseElement)
                         {
-                            _elements[randomMatchedCol, randomMatchedRow] = Element.SpawnInverseGravity( randomMatchedCol, randomMatchedRow, matchedType);
+                            _elements[randomMatchedCol, randomMatchedRow] =
+                                Element.Create(randomMatchedCol, randomMatchedRow, matchedType, true);
                         }
                     }
-
                 }
             }
         }
@@ -140,21 +171,24 @@ public class Grid : MonoBehaviour
         return totalMatches;
     }
 
+    /// <summary>
+    /// Запуск падения всех элементов
+    /// </summary>
     public void DropElementsAll()
     {
         bool dropped = false;
 
-        for (int x = 0; x < columns; x++)
+        for (int x = 0; x < _columns; x++)
         {
             int? firstEmptyY = null;
-            if (!GameManager.GravityInverted) 
-                for (int y = 0; y < rows; y++)
+            if (!GameManager.GravityInverted)
+                for (int y = 0; y < _rows; y++)
                 {
                     if (DropElement(x, y, ref firstEmptyY))
                         dropped = true;
                 }
             else
-                for (int y = rows - 1; y >= 0; y--)
+                for (int y = _rows - 1; y >= 0; y--)
                 {
                     if (DropElement(x, y, ref firstEmptyY))
                         dropped = true;
@@ -169,12 +203,19 @@ public class Grid : MonoBehaviour
         else
         {
             if (!IsGridFull())
-                SpawnNewElements();
+                CreateNewElements();
             else
                 CalculateMatches(true);
         }
     }
 
+    /// <summary>
+    /// Обработка падения конкретного элемента
+    /// </summary>
+    /// <param name="x">Колонка элемента</param>
+    /// <param name="y">Ряд элемента</param>
+    /// <param name="firstEmptyY">Первый пустой ряд</param>
+    /// <returns>Был ли сброшен элемент</returns>
     private bool DropElement(int x, int y, ref int? firstEmptyY)
     {
         if (!firstEmptyY.HasValue && _elements[x, y] == null)
@@ -183,30 +224,38 @@ public class Grid : MonoBehaviour
         }
         else if (firstEmptyY.HasValue && _elements[x, y] != null)
         {
-            _elements[x, firstEmptyY.Value] = _elements[x,y];
+            _elements[x, firstEmptyY.Value] = _elements[x, y];
             _elements[x, y] = null;
-            _elements[x, firstEmptyY.Value].Row = firstEmptyY.Value;
+            _elements[x, firstEmptyY.Value].row = firstEmptyY.Value;
 
             firstEmptyY = GameManager.GravityInverted ? --firstEmptyY : ++firstEmptyY;
-                
+
             return true;
         }
 
         return false;
     }
 
-    public void SpawnNewElements()
+    /// <summary>
+    /// Создание новых элементов в верхнем/нижнем ряду в зависимости от гравитации
+    /// </summary>
+    public void CreateNewElements()
     {
-        int y = GameManager.GravityInverted ? 0 : rows - 1;
-        for (int x = 0; x < columns; x++)
+        int y = GameManager.GravityInverted ? 0 : _rows - 1;
+        for (int x = 0; x < _columns; x++)
         {
             if (_elements[x, y] == null)
-                _elements[x, y] = Element.SpawnRandom(x, y);
+                _elements[x, y] = Element.Create(x, y, Element.GetRandomType(), false);
         }
 
         DropElementsAll();
     }
 
+    /// <summary>
+    /// Получение списка совпадений для конкретного элемента
+    /// </summary>
+    /// <param name="element">Конкретный элемент</param>
+    /// <returns>Список совпавших элементов</returns>
     private List<Element> GetMatchesForElement(Element element)
     {
         List<Element> matchedElements = new List<Element>();
@@ -214,6 +263,11 @@ public class Grid : MonoBehaviour
         return matchedElements;
     }
 
+    /// <summary>
+    /// Рекурсивная проверка на совпадения
+    /// </summary>
+    /// <param name="element">Текущий проверяемый элемент</param>
+    /// <param name="matchedElements">Список совпавших элементов в данном комплекте</param>
     void CheckMatchesRecursive(Element element, ref List<Element> matchedElements)
     {
         matchedElements.Add(element);
@@ -226,11 +280,15 @@ public class Grid : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Проверка на заполненность поля
+    /// </summary>
+    /// <returns>True - поле заполнено, False - есть пустые клетки</returns>
     public bool IsGridFull()
     {
-        for (int x = 0; x < columns; x++)
+        for (int x = 0; x < _columns; x++)
         {
-            for (int y = 0; y < rows; y++)
+            for (int y = 0; y < _rows; y++)
             {
                 if (_elements[x, y] == null)
                     return false;
@@ -240,51 +298,59 @@ public class Grid : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Запуск анимации падения
+    /// </summary>
+    /// <returns></returns>
     private IEnumerator FallAnimation()
     {
         List<Coroutine> coroutines = new List<Coroutine>();
-        for (int x = 0; x < columns; x++)
+        for (int x = 0; x < _columns; x++)
         {
-            for (int y = 0; y < rows; y++)
+            for (int y = 0; y < _rows; y++)
             {
                 if (_elements[x, y] == null) continue;
-                
-                coroutines.Add(_elements[x,y].StartCoroutine(_elements[x,y].SettleWorldPosition()));
+
+                coroutines.Add(_elements[x, y].StartCoroutine(_elements[x, y].UpdateWorldPosition()));
             }
         }
 
         foreach (var coroutine in coroutines)
             yield return coroutine;
-        
-        SpawnNewElements();
+
+        CreateNewElements();
     }
 
+    /// <summary>
+    /// Получение соседних элементов, не учитывая диагонали
+    /// </summary>
+    /// <param name="middleElement">Центральный элемент</param>
+    /// <returns></returns>
     private List<Element> GetAdjacentElements(Element middleElement)
     {
         List<Element> adjacentElements = new List<Element>(4);
-        if (middleElement.Column < columns - 1 && _elements[middleElement.Column + 1, middleElement.Row] != null)
-            adjacentElements.Add(_elements[middleElement.Column + 1, middleElement.Row]);
-            
-        if (middleElement.Column > 0 && _elements[middleElement.Column - 1, middleElement.Row] != null)
-            adjacentElements.Add(_elements[middleElement.Column - 1, middleElement.Row]);
-            
-        if (middleElement.Row < rows - 1 && _elements[middleElement.Column, middleElement.Row + 1] != null)
-            adjacentElements.Add(_elements[middleElement.Column, middleElement.Row + 1]);
-            
-        if (middleElement.Row > 0 && _elements[middleElement.Column, middleElement.Row - 1] != null)
-            adjacentElements.Add(_elements[middleElement.Column, middleElement.Row - 1]);
+        if (middleElement.column < _columns - 1 && _elements[middleElement.column + 1, middleElement.row] != null)
+            adjacentElements.Add(_elements[middleElement.column + 1, middleElement.row]);
+
+        if (middleElement.column > 0 && _elements[middleElement.column - 1, middleElement.row] != null)
+            adjacentElements.Add(_elements[middleElement.column - 1, middleElement.row]);
+
+        if (middleElement.row < _rows - 1 && _elements[middleElement.column, middleElement.row + 1] != null)
+            adjacentElements.Add(_elements[middleElement.column, middleElement.row + 1]);
+
+        if (middleElement.row > 0 && _elements[middleElement.column, middleElement.row - 1] != null)
+            adjacentElements.Add(_elements[middleElement.column, middleElement.row - 1]);
 
         return adjacentElements;
     }
 
+    /// <summary>
+    /// Обновление индексов элемента в общем массиве в соответствии с его колонкой и рядом 
+    /// </summary>
+    /// <param name="element">Элемент</param>
     public void UpdateElementIndices(Element element)
     {
         if (element == null) return;
-        _elements[element.Column, element.Row] = element;
-    }
-
-    public static Vector2 GetWorldCoords(int column, int row)
-    {
-        return new Vector2(column * CellSize + _offset.x, row * CellSize + _offset.y);
+        _elements[element.column, element.row] = element;
     }
 }
