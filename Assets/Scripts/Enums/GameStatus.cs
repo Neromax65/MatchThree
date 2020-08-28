@@ -1,20 +1,22 @@
 ﻿namespace Enums
 {
     /// <summary>
-    /// Перечисление состояний игры
+    ///     Перечисление состояний игры
     /// </summary>
     public enum GameStatus
     {
         /// <summary>
-        /// Генерация игрового поля
+        ///     Генерация игрового поля
         /// </summary>
         Initializing,
+
         /// <summary>
-        /// Проигрывание анимаций
+        ///     Проигрывание анимаций
         /// </summary>
         PlayingAnimation,
+
         /// <summary>
-        /// Ожидания действий игрока
+        ///     Ожидания действий игрока
         /// </summary>
         WaitingForInput
     }

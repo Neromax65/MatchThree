@@ -3,56 +3,76 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// Класс, принимающий ввод игрока 
+///     Класс, принимающий ввод игрока
 /// </summary>
 [RequireComponent(typeof(Element))]
-public class InputHandler : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IEndDragHandler, IDragHandler, IDropHandler
+public class InputHandler : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IEndDragHandler, IDragHandler,
+    IDropHandler
 {
     /// <summary>
-    /// Текущий выбранный элемент
+    ///     Текущий выбранный элемент
     /// </summary>
     private static Element _selectedElement;
-    
+
     /// <summary>
-    /// Элемент к которому применился ввод
+    ///     Элемент к которому применился ввод
     /// </summary>
     [SerializeField] private Element element;
-    
-    /// <summary>
-    /// Был ли произведен обмен элементами
-    /// </summary>
-    private bool _hasSwapped;
 
     /// <summary>
-    /// Выбрать элемент и подсветить его рамкой
+    ///     Был ли произведен обмен элементами
     /// </summary>
-    /// <param name="element">Выбранный элемент</param>
-    void Select(Element element)
+    private static bool _hasSwapped;
+
+    public void OnBeginDrag(PointerEventData eventData)
     {
-        Deselect();
-        element.ToggleSelectionBorder(true);
-        _selectedElement = element;
+        if (GameManager.GameStatus != GameStatus.WaitingForInput) return;
+
+        element.ToggleRaycasts(false);
+        Select(element);
+        element.transform.SetSiblingIndex(transform.parent.childCount - 1);
     }
 
-    /// <summary>
-    /// Отменить выделение текущего элемента, если он существует
-    /// </summary>
-    private void Deselect()
+    public void OnDrag(PointerEventData eventData)
     {
-        if (_selectedElement == null) return;
+        if (GameManager.GameStatus != GameStatus.WaitingForInput) return;
+
+        var raycastPosition = eventData.pointerCurrentRaycast.screenPosition;
+
+        if (raycastPosition.x > 0 && raycastPosition.x < Screen.width && raycastPosition.y > 0 &&
+            raycastPosition.y < Screen.height)
+            transform.position = eventData.pointerCurrentRaycast.screenPosition;
+    }
+
+    public void OnDrop(PointerEventData eventData)
+    {
+        var droppedElement = eventData.pointerDrag.GetComponent<Element>();
+        if (droppedElement == null || droppedElement != _selectedElement || !droppedElement.IsAdjacentTo(element))
+            return;
+
+        _hasSwapped = true;
+        StartCoroutine(droppedElement.Swap(element));
+    }
+
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        if (!_hasSwapped)
+            StartCoroutine(element.UpdateWorldPosition(0.15f));
         
-        _selectedElement.ToggleSelectionBorder(false);
-        _selectedElement = null;
+        Deselect();
+        element.ToggleRaycasts(true);
+
+        _hasSwapped = false;
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
         if (GameManager.GameStatus != GameStatus.WaitingForInput || eventData.dragging) return;
-        
+
         if (_selectedElement == element)
         {
             Deselect();
-        } 
+        }
         else if (_selectedElement == null)
         {
             Select(element);
@@ -68,43 +88,25 @@ public class InputHandler : MonoBehaviour, IPointerClickHandler, IBeginDragHandl
         }
     }
 
-    public void OnBeginDrag(PointerEventData eventData)
-    {
-        if (GameManager.GameStatus != GameStatus.WaitingForInput) return;
-        
-        element.ToggleRaycasts(false);
-        Select(element);
-        element.transform.SetSiblingIndex(transform.parent.childCount-1);
-    }
-    
-    public void OnDrag(PointerEventData eventData)
-    {
-        if (GameManager.GameStatus != GameStatus.WaitingForInput) return;
-
-        Vector2 raycastPosition = eventData.pointerCurrentRaycast.screenPosition;
-        
-        if (raycastPosition.x > 0 && raycastPosition.x < Screen.width && raycastPosition.y > 0 && raycastPosition.y < Screen.height)
-            transform.position = eventData.pointerCurrentRaycast.screenPosition;
-    }
-
-    public void OnEndDrag(PointerEventData eventData)
+    /// <summary>
+    ///     Выбрать элемент и подсветить его рамкой
+    /// </summary>
+    /// <param name="elementToSelect">Выбранный элемент</param>
+    private void Select(Element elementToSelect)
     {
         Deselect();
-        element.ToggleRaycasts(true);
-
-        if (!_hasSwapped)
-            StartCoroutine(element.UpdateWorldPosition(0.15f));
-
-        _hasSwapped = false;
+        elementToSelect.ToggleSelectionBorder(true);
+        _selectedElement = elementToSelect;
     }
 
-    public void OnDrop(PointerEventData eventData)
+    /// <summary>
+    ///     Отменить выделение текущего элемента, если он существует
+    /// </summary>
+    private static void Deselect()
     {
-        var droppedElement = eventData.pointerDrag.GetComponent<Element>();
-        if (droppedElement == null || droppedElement != _selectedElement || !droppedElement.IsAdjacentTo(element))
-            return;
-        
-        _hasSwapped = true;
-        StartCoroutine(_selectedElement.Swap(element));
+        if (_selectedElement == null) return;
+
+        _selectedElement.ToggleSelectionBorder(false);
+        _selectedElement = null;
     }
 }

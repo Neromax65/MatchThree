@@ -1,68 +1,66 @@
 ﻿using Enums;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 
 /// <summary>
-/// Класс, отвечающий за начальные параметры и состояние игры
+///     Класс, отвечающий за начальные параметры и состояние игры
 /// </summary>
 public class GameManager : MonoBehaviour
 {
     /// <summary>
-    /// Реализация синглтона
+    ///     Реализация синглтона
     /// </summary>
     public static GameManager Instance;
-    
-    /// <summary>
-    /// Текущее состояние игры
-    /// </summary>
-    public static GameStatus GameStatus = GameStatus.Initializing;
-    
-    /// <summary>
-    /// Инверсия гравитации
-    /// </summary>
-    public static bool GravityInverted = false;
-    
-    /// <summary>
-    /// Ссылка на префаб элемента
-    /// </summary>
-    public Element elementPrefab;
 
     /// <summary>
-    /// Размер одной клетки. На таком расстоянии друг от друга будут находиться элементы.
+    ///     Текущее состояние игры
+    /// </summary>
+    public static GameStatus GameStatus = GameStatus.Initializing;
+
+    /// <summary>
+    ///     Инверсия гравитации
+    /// </summary>
+    public static bool GravityInverted = false;
+
+    /// <summary>
+    ///     Размер одной клетки. На таком расстоянии друг от друга будут находиться элементы.
     /// </summary>
     public static Vector2 CellSize;
-    
+
     /// <summary>
-    /// Смещение центра размещения элементов в зависимости от разрешения
+    ///     Смещение центра размещения элементов в зависимости от разрешения
     /// </summary>
     public static Vector2 Offset;
 
     /// <summary>
-    /// Минимальное количество подряд идущих элементов, необходимых для засчитывания совпадения.
+    ///     Ссылка на префаб элемента
     /// </summary>
-    [FormerlySerializedAs("MinElementsToMatch")] public int minElementsToMatch = 3;
-    
+    public Element elementPrefab;
+
     /// <summary>
-    /// Минимальное количество совпадений для создания элемента, меняющего гравитацию.
+    ///     Минимальное количество подряд идущих элементов, необходимых для засчитывания совпадения.
     /// </summary>
-    [FormerlySerializedAs("MatchesToSpawnInverseElement")] public int matchesToSpawnInverseElement = 4;
-    
+    public int minElementsToMatch = 3;
+
     /// <summary>
-    /// Количество колонок в сетке (X)
+    ///     Минимальное количество совпадений для создания элемента, меняющего гравитацию.
+    /// </summary>
+    public int matchesToSpawnInverseElement = 4;
+
+    /// <summary>
+    ///     Количество колонок в сетке (X)
     /// </summary>
     public int columns;
-    
+
     /// <summary>
-    /// Количество рядов в сетке (Y)
+    ///     Количество рядов в сетке (Y)
     /// </summary>
     public int rows;
-    
+
     /// <summary>
-    /// Ссылка на экран окончания игры
+    ///     Ссылка на экран окончания игры
     /// </summary>
     [SerializeField] private GameObject endMenu;
-
 
     private void Awake()
     {
@@ -74,23 +72,26 @@ public class GameManager : MonoBehaviour
         AdjustToCurrentResolution();
     }
 
+    /// <summary>
+    ///     Калибровка размера сетки элементов к текущему разрешению
+    /// </summary>
     private void AdjustToCurrentResolution()
     {
-        float cellSizeMultiplier = FindObjectOfType<Canvas>().scaleFactor;
+        var cellSizeMultiplier = FindObjectOfType<Canvas>().scaleFactor;
         CellSize = elementPrefab.GetComponent<RectTransform>().sizeDelta * cellSizeMultiplier;
-        Offset = new Vector2(Screen.width/2 - columns/2 * CellSize.x, Screen.height/2 - rows/2 * CellSize.y);
+        Offset = new Vector2(Screen.width / 2 - columns / 2 * CellSize.x, Screen.height / 2 - rows / 2 * CellSize.y);
     }
 
     /// <summary>
-    /// Показ экрана окончания игры
+    ///     Показ экрана окончания игры
     /// </summary>
-    public void EndGame()
+    public void ShowEndMenu()
     {
         endMenu.SetActive(true);
     }
 
     /// <summary>
-    /// Перезапуск текущей сцены
+    ///     Перезапуск текущей сцены
     /// </summary>
     public void Restart()
     {
@@ -98,7 +99,7 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Выход из приложения
+    ///     Выход из приложения
     /// </summary>
     public void Exit()
     {

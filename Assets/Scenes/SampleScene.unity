@@ -512,7 +512,6 @@ GameObject:
   - component: {fileID: 519420032}
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
-  - component: {fileID: 519420030}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -528,19 +527,6 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
---- !u!114 &519420030
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 519420028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5275404b566562445810aeb6b41a8cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  gameStatusText: {fileID: 516382082}
 --- !u!20 &519420031
 Camera:
   m_ObjectHideFlags: 0
@@ -789,7 +775,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 40aadb9e63d0d2745be1dd423a3e1b4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  elementPrefab: {fileID: 0}
+  elementPrefab: {fileID: 3739257845245242073, guid: 000b0df502986734f81d4d1f6df7a1b9,
+    type: 3}
   minElementsToMatch: 3
   matchesToSpawnInverseElement: 4
   columns: 5
